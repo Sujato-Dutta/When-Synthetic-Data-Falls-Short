@@ -1,0 +1,38 @@
+# Data and sensitive files
+synthetic_hate/data/
+PROJECT_DETAILS.md
+.env
+
+# Figures
+synthetic_hate/evaluation/figures/
+
+# Python environment and cache
+venv/
+synthetic_hate/venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Metrics/Model artifacts
+*.pth
+*.pkl
+*.joblib
+
+# LaTeX build artifacts (ignore the noise, keep the .tex and .bib)
+*.aux
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+synthetic_hate/paper/*.pdf
+
+# OS specific files
+.DS_Store
+Thumbs.db
+.vscode/

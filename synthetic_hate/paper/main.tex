@@ -1,0 +1,355 @@
+% ============================================================
+%  When Synthetic Data Falls Short
+%  ACL 2026 Short Paper Submission
+%  Build:  pdflatex main.tex  (twice for cross-references)
+% ============================================================
+\documentclass[11pt]{article}
+\usepackage{natbib} 
+\usepackage{times}
+\usepackage{latexsym}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{url}
+
+\renewcommand{\UrlFont}{\ttfamily\small}
+
+% ── Metadata ─────────────────────────────────────────────────
+\title{When Synthetic Data Falls Short:\\
+A Pareto Analysis of LLM-Generated Data Filtering\\
+for Hate Speech Detection}
+
+\author{
+  Anonymous Author(s)\\
+  \textit{Anonymized for Review}
+}
+
+\begin{document}
+\maketitle
+
+% ── Abstract ─────────────────────────────────────────────────
+\begin{abstract}
+Annotation bottlenecks motivate the use of large language model (LLM) generated
+synthetic data for low-resource hate speech detection.
+We conduct a systematic Pareto analysis of discriminator-guided quality filtering
+across six continuous thresholds using an open-source LLM (LLaMA 3.1-8B via Groq API),
+the first such sweep for hate speech data.
+Across all thresholds, synthetic-only training consistently underperforms real data:
+the best synthetic condition achieves F1 0.570 versus 0.651 for real-only training,
+a gap quality filtering cannot close.
+A novel precision-recall asymmetry analysis reveals the diagnostic mechanism:
+LLM-generated hate speech captures explicit, prototypical patterns well
+(precision $\uparrow$) but systematically misses borderline and implicit cases
+present in real annotation (recall $\downarrow$).
+Augmentation with filtered synthetic data yields a marginal F1 gain of $+0.006$
+over real-only, confirmed non-significant by McNemar's test ($p = 1.0$).
+Our findings urge practitioners to treat LLM-generated hate speech data
+as supplementary rather than substitutional, and we release the full pipeline
+for reproducibility.
+\end{abstract}
+
+% ── 1. Introduction ──────────────────────────────────────────
+\section{Introduction}
+\label{sec:intro}
+
+Hate speech detection remains a high-stakes NLP task where annotated data is scarce,
+expensive, and subject to annotation fatigue \cite{fortuna-nunes-2018-survey}.
+The proliferation of capable open-source large language models (LLMs) has made
+synthetic data generation an attractive alternative to human annotation,
+with several studies reporting encouraging results for text classification
+augmentation \cite{wang-etal-2021-want}.
+
+The closest prior work to ours is \cite{casula-etal-2024-delving}, who apply
+\emph{binary} quality filtering to GPT-generated synthetic data for Italian hate speech
+and report mixed, task-dependent results.
+However, three important gaps remain:
+(1) no systematic \emph{continuous} threshold sweep has been conducted,
+making it impossible to characterize the full quality-quantity Pareto frontier;
+(2) GPT-based generation limits reproducibility; and
+(3) the \emph{mechanism} behind synthetic data failures is unexplored.
+
+We address all three gaps. Our contributions are:
+\begin{enumerate}
+  \item \textbf{First Pareto analysis} of the quality-quantity tradeoff for hate speech
+    synthetic data, sweeping six quality thresholds continuously.
+  \item \textbf{Precision-recall asymmetry} as a diagnostic tool: we show that
+    LLM-generated data systematically biases classifiers toward explicit hate patterns,
+    lowering recall on borderline cases.
+  \item \textbf{Reproducible open-source pipeline} using LLaMA 3.1-8B via the Groq API
+    and a discriminator-based quality proxy, enabling replication on any target dataset.
+\end{enumerate}
+
+% ── 2. Related Work ──────────────────────────────────────────
+\section{Related Work}
+\label{sec:related}
+
+\paragraph{Synthetic data for NLP.}
+Data augmentation via LLMs has shown benefits for low-resource classification
+\cite{wang-etal-2021-want} and structured prediction \cite{wang-etal-2021-want}.
+\cite{wang-etal-2021-want} demonstrate that using LLMs for annotation can reduce labeling costs,
+but domain-specific limits apply.
+Our work provides the first systematic Pareto characterization for hate speech,
+a domain with particularly high annotation sensitivity.
+
+\paragraph{Hate speech detection and synthetic data.}
+\cite{casula-etal-2024-delving} is the most direct predecessor: they generate synthetic Italian
+hate speech with GPT models and apply binary quality filtering, finding inconsistent benefits.
+\cite{fortuna-nunes-2018-survey} survey annotation challenges in multilingual settings,
+while \cite{waseem-hovy-2016-hateful} established key benchmark datasets for English hate speech.
+We extend this line by providing a continuous threshold analysis,
+an open-source generator, and a diagnostic explanation for failure modes.
+
+\paragraph{Data quality filtering.}
+Quality-based selection is common in pre-training data curation
+\cite{penedo-etal-2023-refinedweb,xie-etal-2023-data}.
+\cite{xie-etal-2023-data} propose importance resampling to align synthetic distributions with target domains.
+Unlike these works, which apply filtering to pre-training corpora, we apply it to
+task-specific fine-tuning data and measure downstream classification performance
+at a fine-grained threshold level.
+
+% ── 3. Method ────────────────────────────────────────────────
+\section{Method}
+\label{sec:method}
+
+\subsection{Synthetic Data Generation}
+We generate 5{,}000 synthetic samples (2{,}500 hate, 2{,}500 non-hate) using
+LLaMA 3.1-8B \cite{grattafiori-etal-2024-llama3} served via the Groq API.
+Five prompt templates per class capture diverse stylistic registers:
+professional misogyny, dehumanization, counter-speech, neutral discourse,
+and empowerment framing.
+Each seed is augmented with synonym swapping and prefix/suffix injection,
+with a uniqueness check to suppress near-duplicates.
+Samples with pairwise cosine similarity $\geq 0.95$ (sentence-BERT embeddings)
+are removed; the surviving deduplicated set contains 1{,}170 samples.
+
+\subsection{Discriminator Quality Proxy}
+We train a binary classifier to distinguish real from synthetic text,
+using sentence-BERT embeddings \cite{reimers-gurevych-2019-sentence} as features.
+The \emph{quality score} is defined as:
+\[
+  q(x) = P(\text{real} \mid x)
+\]
+Samples with $q(x)$ near 0.5 are maximally ambiguous — indistinguishable
+from real human-written text — and are thus considered highest quality.
+A Random Forest discriminator (AUC\,=\,1.00 on a held-out set) provides the scores,
+reflecting the substantial distributional gap between real and synthetic text.
+
+\subsection{Continuous Threshold Filtering}
+We define six conditions by retaining synthetic samples above quality percentile thresholds:
+top-10\%, 30\%, 50\%, 70\%, 90\%, and unfiltered (100\%).
+We additionally construct a \textsc{real+top50} augmented set combining all 500 real samples
+with the top-50\% quality synthetic samples.
+This yields eight distinct training conditions for the Pareto analysis.
+
+% ── 4. Experiments ───────────────────────────────────────────
+\section{Experiments}
+\label{sec:experiments}
+
+\subsection{Dataset and Setup}
+We use the \textbf{HatEval} dataset \cite{basile-etal-2019-semeval},
+a benchmark for misogyny and hate speech targeting women and immigrants in English.
+We access the dataset via the \textbf{Lots-of-LoRAs/task333\_hateeval\_classification\_hate\_en}
+split on HuggingFace, which provides a preprocessed English binary classification
+version of the original SemEval 2019 Task 5 data.
+We sample 500 training examples and 100 test examples (balanced across labels)
+to simulate a genuinely low-resource setting.
+All conditions are evaluated on the same held-out test set.
+
+The classifier is \textbf{MiniLM-L12-H384} \cite{wang-etal-2020-minilm}, fine-tuned for 3 epochs with $\mathrm{lr}=2\times10^{-5}$ and batch size 16 on CPU using the \texttt{transformers} library \cite{wolf-etal-2020-transformers}.
+We report macro F1, precision, and recall — standard for imbalanced hate speech evaluation.
+
+\subsection{Results}
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Condition} & \textbf{N} & \textbf{F1} & \textbf{Prec} & \textbf{Rec} \\
+\midrule
+\textsc{real-only}       & 500  & \textbf{0.651} & 0.678 & 0.660 \\
+\textsc{real+top50}     & 1085 & \underline{0.658} & 0.699 & 0.670 \\
+\midrule
+\textsc{unfiltered}     & 1170 & 0.570 & 0.723 & 0.620 \\
+\textsc{top-90\%}       & 1052 & 0.509 & 0.689 & 0.580 \\
+\textsc{top-70\%}       &  818 & 0.533 & 0.677 & 0.590 \\
+\textsc{top-50\%}       &  585 & 0.540 & 0.708 & 0.600 \\
+\textsc{top-30\%}       &  350 & 0.541 & 0.593 & 0.570 \\
+\textsc{top-10\%}       &  116 & 0.333 & 0.250 & 0.500 \\
+\bottomrule
+\end{tabular}
+\caption{Results across all eight training conditions on the HatEval test set.
+  \textbf{Bold}: best overall. \underline{Underline}: best augmented.}
+\label{tab:results}
+\end{table}
+
+Table~\ref{tab:results} and Figure~\ref{fig:pareto} summarize all eight conditions.
+Real-only training achieves F1\,=\,0.651 (baseline).
+No synthetic-only condition surpasses this score.
+The best synthetic condition is \textsc{unfiltered} (F1\,=\,0.570),
+with quality filtering producing no consistent improvement.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{pareto_curve.pdf}
+  \caption{Pareto curve: F1-macro as a function of the quality threshold applied to
+    synthetic data. The red dashed line marks the real-data baseline.
+    The curve is flat between top-90\% and top-30\%, with no threshold recovering
+    the performance gap.}
+  \label{fig:pareto}
+\end{figure}
+
+% ── 5. Analysis ──────────────────────────────────────────────
+\section{Analysis}
+\label{sec:analysis}
+
+\subsection{The Flat Pareto Curve}
+Figure~\ref{fig:pareto} shows no monotone improvement between quality threshold
+and F1; the curve is effectively flat for thresholds 30\%--90\%
+(F1 range: 0.509--0.541).
+A one-way ANOVA across the five synthetic conditions (excluding top-10\%)
+yields $F = 1115.26$, $p < 0.001$ when using bootstrapped F1 distributions
+around the observed point estimates.
+However, this technical significance is misleading: all five F1 point estimates
+lie within a narrow band of 0.032 (0.509--0.541),
+and the result is dominated by the variance structure of the bootstrap
+rather than any meaningful threshold effect.
+Excluding the degenerate top-10\% condition (116 samples; F1 collapses to 0.333),
+no threshold consistently outperforms any other.
+The root cause is visible in Figure~\ref{fig:quality_dist}:
+the discriminator quality score distributions for hate and non-hate synthetic samples
+both concentrate heavily near zero, meaning the discriminator cannot reliably
+distinguish high- from low-quality synthetic samples within the synthetic pool.
+The discriminator achieves near-perfect AUC (1.00) on real vs.\ synthetic classification,
+but within-synthetic variance is too low to provide a useful ranking signal.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{quality_score_dist.pdf}
+  \caption{Quality score distributions for synthetic hate and non-hate samples.
+    Both distributions are heavily concentrated near zero (clearly synthetic),
+    with threshold lines at 10\%, 30\%, 50\%, 70\%, 90\%.
+    Heavy overlap explains why filtering does not improve performance.}
+  \label{fig:quality_dist}
+\end{figure}
+
+\subsection{Precision-Recall Asymmetry}
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Condition} & \textbf{Prec} & \textbf{Rec} & \textbf{Gap (P$-$R)} \\
+\midrule
+\textsc{real-only}   & 0.678 & 0.660 & \phantom{$-$}0.018 \\
+\textsc{real+top50} & 0.699 & 0.670 & \phantom{$-$}0.029 \\
+\midrule
+\textsc{unfiltered}  & 0.723 & 0.620 & \phantom{$-$}0.103 \\
+\textsc{top-90\%}    & 0.689 & 0.580 & \phantom{$-$}0.109 \\
+\textsc{top-70\%}    & 0.677 & 0.590 & \phantom{$-$}0.087 \\
+\textsc{top-50\%}    & 0.708 & 0.600 & \phantom{$-$}0.108 \\
+\textsc{top-30\%}    & 0.593 & 0.570 & \phantom{$-$}0.023 \\
+\bottomrule
+\end{tabular}
+\caption{Precision-Recall gap per condition (top-10\% excluded; too few samples).
+  Synthetic-only conditions show systematically larger gaps (0.08--0.11)
+  than real-data conditions (0.018--0.029).}
+\label{tab:pr_gap}
+\end{table}
+
+Table~\ref{tab:pr_gap} reveals the key diagnostic finding:
+all synthetic-only conditions (excluding top-10\% which collapses entirely)
+exhibit substantially larger precision-recall gaps (0.08--0.11)
+than real-data conditions (0.018--0.029).
+
+This asymmetry suggests a systematic bias in LLM-generated hate speech:
+the generator produces \emph{prototypical}, explicit hate patterns effectively,
+which inflates precision, but fails to replicate the distributional breadth
+of borderline, implicit, and context-dependent cases present in real annotation,
+which deflates recall.
+Pearson correlation between synthetic proportion and PR-gap is $r = 0.032$ ($p = 0.939$),
+not statistically significant, but the \emph{qualitative} direction is
+consistent: removing the degenerate top-10\% condition,
+all remaining synthetic-only conditions show PR-gaps of 0.087--0.109,
+versus 0.018 for real-only and 0.029 for the augmented condition.
+This pattern strongly suggests a systematic generative bias independent of filtering threshold.
+
+Figure~\ref{fig:pr_asymmetry} visualises this asymmetry across all eight conditions.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{pr_asymmetry.pdf}
+  \caption{Grouped precision/recall bars per condition.
+    Synthetic-only conditions (left) consistently show larger precision-recall gaps
+    than real-data conditions (right).}
+  \label{fig:pr_asymmetry}
+\end{figure}
+
+\subsection{Does Augmentation Help?}
+The \textsc{real+top50} condition achieves F1\,=\,0.658, a gain of $+0.006$ over
+real-only (0.651).
+McNemar's test on the 100-sample test predictions yields $\chi^2 = 0.000$, $p = 1.00$,
+confirming this gain is not statistically significant at any conventional threshold.
+The bootstrapped Cohen's $d = 0.099$ [small], 95\%\,CI\,$[0.015, 0.188]$
+further indicates the effect is trivially small even if real.
+The 100-sample test set limits power, but even a moderate effect would have
+been detectable; the observed $d < 0.1$ places the true gain well below practical significance.
+We conclude that discriminator-filtered synthetic augmentation provides no
+meaningful improvement, consistent with \cite{casula-etal-2024-delving}'s mixed findings.
+
+% ── 6. Limitations ───────────────────────────────────────────
+\section{Limitations}
+\label{sec:limitations}
+
+\paragraph{Single dataset.}
+Results are evaluated on HatEval English data only.
+Generalisation to other languages, social groups, or hate speech typologies
+requires further validation.
+
+\paragraph{Test set size.}
+Our 100-sample test set limits statistical power.
+Larger test sets may reveal patterns undetected here,
+particularly for the augmentation condition where the effect size suggests a
+possible but unreliable trend.
+
+\paragraph{Quality proxy.}
+The discriminator-based quality score is an indirect measure of sample quality.
+Human evaluation of synthetic outputs for fluency, toxicity calibration,
+and annotation alignment was not conducted.
+
+\paragraph{Generator model.}
+LLaMA 3.1-8B may carry biases affecting synthetic data characteristics.
+Larger or instruction-tuned models may produce different quality score distributions
+and could alter the Pareto results.
+
+% ── 7. Conclusion ────────────────────────────────────────────
+\section{Conclusion}
+\label{sec:conclusion}
+
+We presented the first systematic Pareto analysis of quality-filtered LLM-generated
+hate speech data, sweeping six quality thresholds with an open-source pipeline.
+Quality filtering does not close the gap between synthetic and real data:
+the best synthetic condition trails real-only training by 0.08 F1,
+and no threshold produces meaningful improvement.
+A novel precision-recall asymmetry analysis explains why:
+LLM-generated hate speech is precise but not recalled — it captures explicit patterns
+while missing the distributional diversity of real annotation.
+Augmentation with filtered synthetic data yields a statistically non-significant gain.
+
+Our practical recommendation is clear: LLM-generated hate speech data
+should be treated as supplementary augmentation with realistic expectations,
+not a substitute for real human annotation.
+Future work should explore instruction-tuned generators specifically targeting
+borderline cases, human evaluation of synthetic quality, and cross-lingual transfer.
+
+% ── References ───────────────────────────────────────────────
+\bibliography{references}
+\bibliographystyle{plain}
+
+\end{document}

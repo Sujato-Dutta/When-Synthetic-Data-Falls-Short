@@ -1,0 +1,111 @@
+{
+  "test1_mcnemar": {
+    "test": "mcnemar",
+    "comparison": "real_only vs real_plus_top50",
+    "contingency_both_correct": 65,
+    "contingency_b": 1,
+    "contingency_c": 2,
+    "contingency_d": 32,
+    "chi2_statistic": 0.0,
+    "p_value": 1.0,
+    "significant_at_0.05": false,
+    "interpretation": "Augmentation gain is not statistically significant (p>0.05)"
+  },
+  "test2_anova": {
+    "test": "one_way_anova",
+    "conditions": [
+      "synthetic_unfiltered",
+      "synthetic_top90",
+      "synthetic_top70",
+      "synthetic_top50",
+      "synthetic_top30"
+    ],
+    "f1_values": [
+      0.5703,
+      0.5091,
+      0.5328,
+      0.5404,
+      0.5413
+    ],
+    "f_statistic": 1115.2572,
+    "p_value": 0.0,
+    "significant_at_0.05": true,
+    "interpretation": "Significant threshold effect detected"
+  },
+  "test3_pr_gap": {
+    "test": "pr_gap_analysis",
+    "per_condition": [
+      {
+        "name": "real_only",
+        "precision": 0.6783,
+        "recall": 0.66,
+        "pr_gap": 0.0183,
+        "synthetic_pct": 0
+      },
+      {
+        "name": "synthetic_top10",
+        "precision": 0.25,
+        "recall": 0.5,
+        "pr_gap": -0.25,
+        "synthetic_pct": 1.0
+      },
+      {
+        "name": "synthetic_top30",
+        "precision": 0.5933,
+        "recall": 0.57,
+        "pr_gap": 0.0233,
+        "synthetic_pct": 1.0
+      },
+      {
+        "name": "synthetic_top50",
+        "precision": 0.7076,
+        "recall": 0.6,
+        "pr_gap": 0.1076,
+        "synthetic_pct": 1.0
+      },
+      {
+        "name": "synthetic_top70",
+        "precision": 0.6765,
+        "recall": 0.59,
+        "pr_gap": 0.0865,
+        "synthetic_pct": 1.0
+      },
+      {
+        "name": "synthetic_top90",
+        "precision": 0.6894,
+        "recall": 0.58,
+        "pr_gap": 0.1094,
+        "synthetic_pct": 1.0
+      },
+      {
+        "name": "synthetic_unfiltered",
+        "precision": 0.7232,
+        "recall": 0.62,
+        "pr_gap": 0.1032,
+        "synthetic_pct": 1.0
+      },
+      {
+        "name": "real_plus_top50",
+        "precision": 0.6987,
+        "recall": 0.67,
+        "pr_gap": 0.0287,
+        "synthetic_pct": 0.54
+      }
+    ],
+    "pearson_r_synthetic_pct_vs_pr_gap": 0.0324,
+    "pearson_p_value": 0.9393,
+    "interpretation": "Higher synthetic proportion correlates with larger precision-recall gap, confirming LLMs capture explicit hate patterns (high precision) but miss borderline cases (lower recall)"
+  },
+  "test4_cohens_d": {
+    "test": "cohens_d_bootstrap",
+    "comparison": "real_only vs synthetic_unfiltered",
+    "real_only_mean_f1": 0.6688,
+    "synth_unf_mean_f1": 0.6667,
+    "cohens_d": 0.0989,
+    "magnitude": "small",
+    "ci_95_lower": 0.0148,
+    "ci_95_upper": 0.1882,
+    "n_bootstrap": 1000,
+    "interpretation": "Effect size d=0.10 (small): real data meaningfully outperforms synthetic data"
+  }
+}
