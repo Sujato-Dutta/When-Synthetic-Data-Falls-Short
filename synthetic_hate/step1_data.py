@@ -12,7 +12,7 @@ Usage:    python step1_data.py
 
 Outputs:
   data/real_samples.csv  -- 500 samples (250 hate + 250 non-hate)
-  data/real_test.csv     -- 100 samples (50 hate + 50 non-hate), never touched in training
+  data/real_test.csv     -- 400 samples (200 hate + 200 non-hate), never touched in training
 """
 
 import os, re, sys
@@ -102,11 +102,11 @@ def main():
 
     n_hate    = (df.label == 1).sum()
     n_nonhate = (df.label == 0).sum()
-    assert n_hate    >= 300, "Need >=300 hate, got {}".format(n_hate)
-    assert n_nonhate >= 300, "Need >=300 non-hate, got {}".format(n_nonhate)
+    assert n_hate    >= 450, "Need >=450 hate for train+test, got {}".format(n_hate)
+    assert n_nonhate >= 450, "Need >=450 non-hate for train+test, got {}".format(n_nonhate)
 
-    # TEST set first (50+50=100) -- held out permanently
-    test_df = sample_balanced(df, n_per_class=50)
+    # TEST set first (200+200=400) -- held out permanently, zero overlap with train
+    test_df = sample_balanced(df, n_per_class=200)
     test_df["source"] = "real"
     test_idx = set(test_df.index)
 

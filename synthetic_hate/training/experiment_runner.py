@@ -43,8 +43,12 @@ def load_manifest(manifest_path: str) -> list[dict]:
 
 def load_results(results_path: str) -> list[dict]:
     if os.path.exists(results_path):
-        with open(results_path) as f:
-            return json.load(f)
+        try:
+            with open(results_path) as f:
+                content = f.read().strip()
+                return json.loads(content) if content else []
+        except json.JSONDecodeError:
+            return []
     return []
 
 

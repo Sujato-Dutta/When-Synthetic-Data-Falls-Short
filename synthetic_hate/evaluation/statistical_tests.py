@@ -5,7 +5,7 @@ Outputs:  results/statistical_results.json
           (also prints a clean summary table to stdout)
 
 Tests:
-  1. McNemar's test  — real_only vs real_plus_top50  (paired, 100-sample test set)
+  1. McNemar's test  — real_only vs real_plus_top50  (paired, 400-sample test set)
   2. One-way ANOVA  — F1 across synthetic conditions (excl. top10), flat Pareto
   3. PR-gap analysis — precision-recall asymmetry + Pearson r with synthetic_pct
   4. Cohen's d       — real_only vs synthetic_unfiltered, bootstrap 95 % CI
@@ -26,20 +26,12 @@ RANDOM_SEED = 42
 random.seed(RANDOM_SEED)
 np.random.seed(RANDOM_SEED)
 
-# ── Ground-truth results ──────────────────────────────────────────────────────
-RESULTS = [
-    {"variant_name": "real_only",            "threshold": None, "n_train_samples": 500,  "synthetic_pct": 0,    "f1_macro": 0.6511, "precision": 0.6783, "recall": 0.66, "accuracy": 0.66},
-    {"variant_name": "synthetic_unfiltered", "threshold": None, "n_train_samples": 1170, "synthetic_pct": 1.0,  "f1_macro": 0.5703, "precision": 0.7232, "recall": 0.62, "accuracy": 0.62},
-    {"variant_name": "synthetic_top90",      "threshold": 0.9,  "n_train_samples": 1052, "synthetic_pct": 1.0,  "f1_macro": 0.5091, "precision": 0.6894, "recall": 0.58, "accuracy": 0.58},
-    {"variant_name": "synthetic_top70",      "threshold": 0.7,  "n_train_samples": 818,  "synthetic_pct": 1.0,  "f1_macro": 0.5328, "precision": 0.6765, "recall": 0.59, "accuracy": 0.59},
-    {"variant_name": "synthetic_top50",      "threshold": 0.5,  "n_train_samples": 585,  "synthetic_pct": 1.0,  "f1_macro": 0.5404, "precision": 0.7076, "recall": 0.60, "accuracy": 0.60},
-    {"variant_name": "synthetic_top30",      "threshold": 0.3,  "n_train_samples": 350,  "synthetic_pct": 1.0,  "f1_macro": 0.5413, "precision": 0.5933, "recall": 0.57, "accuracy": 0.57},
-    {"variant_name": "synthetic_top10",      "threshold": 0.1,  "n_train_samples": 116,  "synthetic_pct": 1.0,  "f1_macro": 0.3333, "precision": 0.25,   "recall": 0.50, "accuracy": 0.50},
-    {"variant_name": "real_plus_top50",      "threshold": 0.5,  "n_train_samples": 1085, "synthetic_pct": 0.54, "f1_macro": 0.6576, "precision": 0.6987, "recall": 0.67, "accuracy": 0.67},
-]
+# ── Load Results ─────────────────────────────────────────────────────────────
+with open(os.path.join(RESULTS_DIR, "results.json")) as f:
+    RESULTS = json.load(f)
 
 by_name = {r["variant_name"]: r for r in RESULTS}
-N_TEST  = 100   # test set size
+N_TEST  = 400   # test set size
 
 
 # ─────────────────────────────────────────────────────────────────────────────
