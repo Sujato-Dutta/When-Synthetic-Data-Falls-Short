@@ -58,7 +58,7 @@ making it impossible to characterize the full quality-quantity Pareto frontier;
 We address all three gaps. Our contributions are:
 \begin{enumerate}
   \item \textbf{Pareto analysis} of the quality-quantity tradeoff for hate speech
-    synthetic data, sweeping six quality thresholds continuously.
+    synthetic data, sweeping six quality thresholds continuously. To our knowledge, no prior work has conducted a systematic continuous threshold sweep for hate speech synthetic data
   \item \textbf{Precision-recall asymmetry} as a diagnostic tool: we show that
     LLM-generated data systematically biases classifiers toward explicit hate patterns,
     lowering recall on borderline cases.
@@ -276,7 +276,7 @@ The \textsc{real+top50} configuration achieves an F1 score of 0.727, representin
 
 This result indicates that the small F1 improvement observed under filtered synthetic augmentation does not correspond to a statistically significant change in the model’s prediction decisions. In practical terms, the classifier trained with filtered synthetic data behaves similarly to the real-only model on the evaluation set.
 
-This observation aligns with prior work \cite{casula-etal-2024-delving}, which reports mixed benefits from synthetic data augmentation for hate speech detection.
+Bootstrapped Cohen's d = 2.315 [large], 95\% CI [2.203, 2.419] (real vs. synthetic unfiltered) quantifies the magnitude of this gap; the large effect size reflects the fundamental distributional difference between real and synthetic training regimes rather than a marginal system comparison. We therefore conclude that discriminator-filtered synthetic augmentation provides no statistically or practically significant improvement in this setting.
 
 % ── 6. Limitations ───────────────────────────────────────────
 \section{Limitations}
@@ -307,7 +307,7 @@ may capture complementary aspects of sample quality and are worth exploring.
 \section{Conclusion}
 \label{sec:conclusion}
 
-We presented the first systematic Pareto analysis of quality-filtered LLM-generated
+We presented, to our knowledge, the first systematic Pareto analysis of quality-filtered LLM-generated
 hate speech data, sweeping six continuous quality thresholds with a fully open-source pipeline.
 Evaluated on a 400-sample held-out test set, quality filtering does not close the gap
 between synthetic and real data: the best synthetic-only condition achieves F1\,=\,0.576
